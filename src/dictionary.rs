@@ -1,3 +1,4 @@
+pub mod pattern;
 pub mod word;
 pub mod dictionary {
     use super::word::word::{parse_word, Word, WordType};
@@ -17,7 +18,7 @@ pub mod dictionary {
     #[derive(PartialEq, Debug, Clone)]
     pub struct Index {
         pub tag_children: HashMap<String, HashSet<String>>,
-        pub tags: HashMap<(WordType, String), HashSet<Uuid>>,
+        pub tag_words: HashMap<(WordType, String), HashSet<Uuid>>,
     }
 
     #[derive(PartialEq, Debug, Clone)]
@@ -39,12 +40,12 @@ pub mod dictionary {
                 for or in or_set {
                     if self
                         .index
-                        .tags
+                        .tag_words
                         .contains_key(&(word_type.clone(), or.to_string()))
                     {
                         let tag_ids = self
                             .index
-                            .tags
+                            .tag_words
                             .get(&(word_type.clone(), or.to_string()))
                             .unwrap();
                         for id in tag_ids {
@@ -86,7 +87,7 @@ pub mod dictionary {
             words: HashMap::new(),
             index: Index {
                 tag_children: HashMap::new(),
-                tags: HashMap::new(),
+                tag_words: HashMap::new(),
             },
         };
         for line in &lines {
@@ -141,15 +142,15 @@ pub mod dictionary {
                 for tag in &word.tags {
                     if !dict
                         .index
-                        .tags
+                        .tag_words
                         .contains_key(&(word.word_type.clone(), tag.to_string()))
                     {
                         dict.index
-                            .tags
+                            .tag_words
                             .insert((word.word_type.clone(), tag.clone()), HashSet::new());
                     }
                     dict.index
-                        .tags
+                        .tag_words
                         .get_mut(&(word.word_type.clone(), tag.clone()))
                         .unwrap()
                         .insert(word.id.clone());
@@ -233,7 +234,7 @@ pub mod dictionary {
             "TAG(Fruit), HAS_PARENT(Food)",
         ]);
         assert!(dict.words.len().eq(&3));
-        assert!(dict.index.tags.len().eq(&9));
+        assert!(dict.index.tag_words.len().eq(&9));
     }
 
     #[test]

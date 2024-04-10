@@ -28,8 +28,8 @@ pub mod word {
         pub related: HashSet<(WordRelationType, Uuid)>,
     }
 
-    fn get_wrapper_content(wrapper: &str, line: &str) -> Option<String> {
-        let regex = Regex::new(&format!(r"{}\(([a-zA-Z0-9]+)\)", wrapper)).unwrap();
+    pub fn get_wrapper_content(wrapper: &str, line: &str) -> Option<String> {
+        let regex = Regex::new(&format!(r"{}\(([a-zA-Z0-9\[\], ]+)\)", wrapper)).unwrap();
         let capture = regex.captures(line);
         if capture.is_some() {
             return Some(capture.unwrap().get(1).unwrap().as_str().to_string());
@@ -38,7 +38,7 @@ pub mod word {
         }
     }
 
-    fn get_word_tags(line: &str) -> Vec<String> {
+    pub fn get_word_tags(line: &str) -> Vec<String> {
         let regex = Regex::new(&format!(r",?\s?{}\(([a-zA-Z0-9]+)\)", TAG_WRAPPER)).unwrap();
         return regex
             .find_iter(line)
