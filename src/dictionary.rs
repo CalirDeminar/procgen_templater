@@ -1,7 +1,10 @@
 pub mod template;
 pub mod word;
 pub mod dictionary {
-    use super::{template::template::{parse_template, Template}, word::word::{parse_word, Word, WordType}};
+    use super::{
+        template::template::{parse_template, Template},
+        word::word::{parse_word, Word, WordType},
+    };
     use rand::seq::SliceRandom;
     use rand::Rng;
     use regex::Regex;
@@ -19,7 +22,7 @@ pub mod dictionary {
     pub struct Index {
         pub tag_children: HashMap<String, HashSet<String>>,
         pub tag_words: HashMap<(WordType, String), HashSet<Uuid>>,
-        pub tag_templates: HashMap<String, HashSet<Uuid>>
+        pub tag_templates: HashMap<String, HashSet<Uuid>>,
     }
 
     #[derive(PartialEq, Debug, Clone)]
@@ -29,15 +32,12 @@ pub mod dictionary {
         pub index: Index,
     }
 
-    pub type SearchPattern = Vec<Vec<String>>;
+    pub type SearchPattern = (WordType, Vec<Vec<String>>);
 
     impl Dictionary {
-        pub fn get_random_word(
-            self: &Self,
-            word_type: WordType,
-            tags: SearchPattern,
-        ) -> Option<&Word> {
+        pub fn get_random_word(self: &Self, pattern: SearchPattern) -> Option<&Word> {
             // tag arguments [[OR] AND [OR]]
+            let (word_type, tags) = pattern;
             let mut word_pool: HashSet<Uuid> = HashSet::new();
             for or_set in &tags {
                 let mut s: HashSet<Uuid> = HashSet::new();
@@ -80,7 +80,8 @@ pub mod dictionary {
             return None;
         }
 
-        fn get_random_template(self: &Self,
+        fn get_random_template(
+            self: &Self,
             word_type: WordType,
             tags: SearchPattern,
         ) -> Option<&Template> {
@@ -88,8 +89,26 @@ pub mod dictionary {
             return None;
         }
 
-        fn render_pattern(self: &Self, pattern_id: Uuid) -> Option<String> {
-            // TODO
+        fn render_template(self: &Self, template_id: &Uuid) -> Option<String> {
+            let t = self.templates.get(&template_id);
+            if t.is_some() {
+                let template = t.unwrap();
+                let components: Vec<String> = template
+                    .template
+                    .iter()
+                    .map(|c| {
+                        if c.template.is_some() {
+                            self.get_random_word((WordType::Noun, c.template.clone().unwrap().1))
+                                .unwrap()
+                                .base
+                                .clone()
+                        } else {
+                            c.text.clone().unwrap()
+                        }
+                    })
+                    .collect();
+                return Some(components.join(""));
+            }
             return None;
         }
     }
@@ -192,7 +211,11 @@ pub mod dictionary {
                     if !dict.index.tag_templates.contains_key(&tag.to_string()) {
                         dict.index.tag_templates.insert(tag.clone(), HashSet::new());
                     }
-                    dict.index.tag_templates.get_mut(tag).unwrap().insert(template.id.clone());
+                    dict.index
+                        .tag_templates
+                        .get_mut(tag)
+                        .unwrap()
+                        .insert(template.id.clone());
                 }
             }
         }
@@ -202,7 +225,7 @@ pub mod dictionary {
         return ParseResult {
             words: parse_word(line),
             tag_children: parse_tag_children(line),
-            pattern: parse_template(line)
+            pattern: parse_template(line),
         };
     }
 
@@ -273,7 +296,7 @@ pub mod dictionary {
             "TAG(Tree), HAS_PARENT(Wood), HAS_PARENT(Plant)",
             "TAG(Wood), HAS_PARENT(Material)",
             "TAG(Fruit), HAS_PARENT(Food)",
-            "TAG(Restaurant), HAS_PARENT(Institution)"
+            "TAG(Restaurant), HAS_PARENT(Institution)",
         ]);
         assert!(dict.words.len().eq(&3));
         assert!(dict.index.tag_words.len().eq(&9));
@@ -292,9 +315,30 @@ pub mod dictionary {
             "TAG(Fruit), HAS_PARENT(Food)",
         ]);
         assert!(dict
-            .get_random_word(WordType::Noun, vec![vec!["Wood".to_string()], vec!["Fruit".to_string()]])
+            .get_random_word((
+                WordType::Noun,
+                vec![vec!["Wood".to_string()], vec!["Fruit".to_string()]]
+            ))
             .unwrap()
             .base
             .eq(&"Pear"));
+    }
+
+    #[test]
+    fn test_template_render() {
+        let dict = build_dictionary(vec![
+            "TEMPLATE([[Metal]] Bull Pub), TAG(Restaurant)",
+            "NOUN(Steel), TAG(Metal), TAG(Ferrous), TAG(Alloy)",
+            "NOUN(Oak), TAG(Tree)",
+            "NOUN(Pear), TAG(Tree), TAG(Fruit)",
+            "TAG(Metal), HAS_PARENT(Material)",
+            "TAG(Tree), HAS_PARENT(Wood), HAS_PARENT(Plant)",
+            "TAG(Wood), HAS_PARENT(Material)",
+            "TAG(Fruit), HAS_PARENT(Food)",
+            "TAG(Restaurant), HAS_PARENT(Institution)",
+        ]);
+        let template_keys = Vec::from_iter(dict.templates.keys());
+        let template = template_keys.first().unwrap();
+        assert!(dict.render_template(template).unwrap().eq("Steel Bull Pub"));
     }
 }
