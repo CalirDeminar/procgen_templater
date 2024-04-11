@@ -89,28 +89,7 @@ pub mod dictionary {
             return None;
         }
 
-        fn render_template(self: &Self, template_id: &Uuid) -> Option<String> {
-            let t = self.templates.get(&template_id);
-            if t.is_some() {
-                let template = t.unwrap();
-                let components: Vec<String> = template
-                    .template
-                    .iter()
-                    .map(|c| {
-                        if c.template.is_some() {
-                            self.get_random_word((WordType::Noun, c.template.clone().unwrap().1))
-                                .unwrap()
-                                .base
-                                .clone()
-                        } else {
-                            c.text.clone().unwrap()
-                        }
-                    })
-                    .collect();
-                return Some(components.join(""));
-            }
-            return None;
-        }
+        
     }
 
     pub struct ParseResult {
@@ -119,7 +98,7 @@ pub mod dictionary {
         pattern: Option<Template>,
     }
 
-    fn build_dictionary(lines: Vec<&str>) -> Dictionary {
+    pub fn build_dictionary(lines: Vec<String>) -> Dictionary {
         let mut output = Dictionary {
             words: HashMap::new(),
             templates: HashMap::new(),
@@ -288,15 +267,15 @@ pub mod dictionary {
     #[test]
     fn test_build_dictionary() {
         let dict = build_dictionary(vec![
-            "TEMPLATE([[Metal]] Bull Pub), TAG(Restaurant)",
-            "NOUN(Steel), TAG(Metal), TAG(Ferrous), TAG(Alloy)",
-            "NOUN(Oak), TAG(Tree)",
-            "NOUN(Pear), TAG(Tree), TAG(Fruit)",
-            "TAG(Metal), HAS_PARENT(Material)",
-            "TAG(Tree), HAS_PARENT(Wood), HAS_PARENT(Plant)",
-            "TAG(Wood), HAS_PARENT(Material)",
-            "TAG(Fruit), HAS_PARENT(Food)",
-            "TAG(Restaurant), HAS_PARENT(Institution)",
+            "TEMPLATE(NOUN[[Metal]] Bull Pub), TAG(Restaurant)".to_string(),
+            "NOUN(Steel), TAG(Metal), TAG(Ferrous), TAG(Alloy)".to_string(),
+            "NOUN(Oak), TAG(Tree)".to_string(),
+            "NOUN(Pear), TAG(Tree), TAG(Fruit)".to_string(),
+            "TAG(Metal), HAS_PARENT(Material)".to_string(),
+            "TAG(Tree), HAS_PARENT(Wood), HAS_PARENT(Plant)".to_string(),
+            "TAG(Wood), HAS_PARENT(Material)".to_string(),
+            "TAG(Fruit), HAS_PARENT(Food)".to_string(),
+            "TAG(Restaurant), HAS_PARENT(Institution)".to_string(),
         ]);
         assert!(dict.words.len().eq(&3));
         assert!(dict.index.tag_words.len().eq(&9));
@@ -306,13 +285,13 @@ pub mod dictionary {
     #[test]
     fn test_random_word() {
         let dict = build_dictionary(vec![
-            "NOUN(Steel), TAG(Metal), TAG(Ferrous), TAG(Alloy)",
-            "NOUN(Oak), TAG(Tree)",
-            "NOUN(Pear), TAG(Tree), TAG(Fruit)",
-            "TAG(Metal), HAS_PARENT(Material)",
-            "TAG(Tree), HAS_PARENT(Wood), HAS_PARENT(Plant)",
-            "TAG(Wood), HAS_PARENT(Material)",
-            "TAG(Fruit), HAS_PARENT(Food)",
+            "NOUN(Steel), TAG(Metal), TAG(Ferrous), TAG(Alloy)".to_string(),
+            "NOUN(Oak), TAG(Tree)".to_string(),
+            "NOUN(Pear), TAG(Tree), TAG(Fruit)".to_string(),
+            "TAG(Metal), HAS_PARENT(Material)".to_string(),
+            "TAG(Tree), HAS_PARENT(Wood), HAS_PARENT(Plant)".to_string(),
+            "TAG(Wood), HAS_PARENT(Material)".to_string(),
+            "TAG(Fruit), HAS_PARENT(Food)".to_string(),
         ]);
         assert!(dict
             .get_random_word((
@@ -324,21 +303,5 @@ pub mod dictionary {
             .eq(&"Pear"));
     }
 
-    #[test]
-    fn test_template_render() {
-        let dict = build_dictionary(vec![
-            "TEMPLATE([[Metal]] Bull Pub), TAG(Restaurant)",
-            "NOUN(Steel), TAG(Metal), TAG(Ferrous), TAG(Alloy)",
-            "NOUN(Oak), TAG(Tree)",
-            "NOUN(Pear), TAG(Tree), TAG(Fruit)",
-            "TAG(Metal), HAS_PARENT(Material)",
-            "TAG(Tree), HAS_PARENT(Wood), HAS_PARENT(Plant)",
-            "TAG(Wood), HAS_PARENT(Material)",
-            "TAG(Fruit), HAS_PARENT(Food)",
-            "TAG(Restaurant), HAS_PARENT(Institution)",
-        ]);
-        let template_keys = Vec::from_iter(dict.templates.keys());
-        let template = template_keys.first().unwrap();
-        assert!(dict.render_template(template).unwrap().eq("Steel Bull Pub"));
-    }
+   
 }

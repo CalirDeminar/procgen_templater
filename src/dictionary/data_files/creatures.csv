@@ -1,0 +1,19 @@
+// tags
+TAG(Mammal), HAS_PARENT(Creature)
+TAG(Bird), HAS_PARENT(Creature), HAS_PARENT(EggLaying)
+TAG(Reptile), HAS_PARENT(Creature), HAS_PARENT(EggLaying)
+TAG(Inspect), HAS_PARENT(Creature)
+TAG(Fish), HAS_PARENT(Creature)
+// Mythical
+// Fantasy
+// Animals
+//  Land
+NOUN(Bear), TAG(Mammal), TAG(Large)
+NOUN(Alpaca), TAG(Mammal), TAG(Normal)
+NOUN(BAT), TAG(Mammal), TAG(Small), TAG(Flying)
+NOUN(Cat), TAG(Mammal), TAG(Small)
+NOUN(Dog), TAG(Mammal), TAG(Small)
+NOUN(Donkey), TAG(Mammal), TAG(Normal)
+NOUN(Goat), TAG(Mammal), TAG(Normal)
+NOUN(Horse), TAG(Mammal), TAG(Normal)
+NOUN(Llama), TAG(Mammal), TAG(Normal)

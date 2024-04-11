@@ -5,7 +5,7 @@ pub mod template {
     use uuid::Uuid;
 
     use crate::dictionary::{
-        dictionary::SearchPattern,
+        dictionary::{build_dictionary, Dictionary, SearchPattern},
         word::word::{get_word_tags, get_wrapper_content, WordType},
     };
 
@@ -22,6 +22,31 @@ pub mod template {
         pub template: Option<SearchPattern>,
     }
 
+    impl Dictionary {
+        pub fn render_template(self: &Self, template_id: &Uuid) -> Option<String> {
+            let t = self.templates.get(&template_id);
+            if t.is_some() {
+                let template = t.unwrap();
+                let components: Vec<String> = template
+                    .template
+                    .iter()
+                    .map(|c| {
+                        if c.template.is_some() {
+                            self.get_random_word((WordType::Noun, c.template.clone().unwrap().1))
+                                .unwrap()
+                                .base
+                                .clone()
+                        } else {
+                            c.text.clone().unwrap()
+                        }
+                    })
+                    .collect();
+                return Some(components.join(" "));
+            }
+            return None;
+        }
+    }
+
     #[derive(PartialEq, Debug, Clone)]
     pub struct Template {
         pub id: Uuid,
@@ -30,57 +55,61 @@ pub mod template {
     }
 
     pub fn parse_template(line: &str) -> Option<Template> {
-        let template_wrapped = get_wrapper_content(TEMPLATE_WRAPPER, line);
-        let format_template = Regex::new(TEMPLATE_FORMAT_TOP_REGEX).unwrap();
-        let global_template = Regex::new(TEMPLATE_GLOBAL_REGEX).unwrap();
-        let tags = get_word_tags(line);
-        let mut output: Vec<TemplateElement> = Vec::new();
-        if template_wrapped.is_some() {
-            let p = template_wrapped.unwrap();
-            let template_sections = global_template.captures_iter(&p);
-            for section in template_sections {
-                let section_text = section.get(0).unwrap().as_str();
-                if format_template.is_match(section_text) {
-                    output.push(TemplateElement {
-                        text: None,
-                        template: Some(parse_template_term(section_text)),
-                    });
-                } else {
-                    output.push(TemplateElement {
-                        text: Some(section_text.to_string()),
-                        template: None,
-                    });
-                }
-            }
-            return Some(Template {
-                id: Uuid::new_v4(),
-                template: output,
-                tags: HashSet::from_iter(tags),
-            });
-        }
-        return None;
-    }
 
-    fn parse_template_term(line: &str) -> SearchPattern {
-        // TODO - pull type as prefix from pattern format
-        let word_type = WordType::Noun;
-        let mut output: Vec<Vec<String>> = Vec::new();
-        let top_template = Regex::new(TEMPLATE_FORMAT_TOP_REGEX).unwrap();
-        let top_match = top_template.find(line);
-        if top_match.is_some() {
-            let top = top_match.unwrap().as_str();
-            let and_group_template = Regex::new(TEMPLATE_FORMAT_AND_GROUP_REGEX).unwrap();
-            for and_group in and_group_template.find_iter(top) {
-                let mut or_vec: Vec<String> = Vec::new();
-                let and = and_group.as_str();
-                let or_group_template = Regex::new(TEMPLATE_FORMAT_OR_GROUP_REGEX).unwrap();
-                for or_group in or_group_template.captures_iter(and) {
-                    or_vec.push(or_group.get(0).unwrap().as_str().trim().to_string());
+        let and_groups_pattern = Regex::new(r"(ADJECTIVE|NOUN)\[(\[(?:[a-zA-Z, ]+)+\])+\]").unwrap();
+        let subset_pattern = Regex::new(&format!(r"{}|(?:[a-zA-Z]+)", and_groups_pattern.as_str())).unwrap();
+        let search_pattern = Regex::new(&format!(r"TEMPLATE\((?:(?:(?:{}\s?)+)+|(?:[A-Za-z ]+))+\)", subset_pattern.as_str())).unwrap();
+        let search_result = search_pattern.find(line);
+        
+        let mut output = Template {
+            id: Uuid::new_v4(),
+            template: Vec::new(),
+            tags: HashSet::new(),
+        };
+        if search_result.is_none() {
+            return None;
+        }
+        for subset in subset_pattern.find_iter(search_result.unwrap().as_str()).map(|m| m.as_str()) {
+        
+            let mut pattern: SearchPattern = (WordType::Noun, Vec::new());
+            let and_groups = and_groups_pattern.captures(subset);
+            if and_groups.is_some() {
+                
+                for and in and_groups.unwrap().iter().skip(1) {
+                    let and_str = and.unwrap().as_str();
+                    if and_str.eq("NOUN") {
+                        pattern.0 = WordType::Noun;
+                    } else if and_str.eq("ADJECTIVE") {
+                        pattern.0 = WordType::Adjective;
+                    } else if and_str.eq("TEMPLATE") 
+                    {
+
+                    } else {
+                        let mut or_groups = and_str.replace("]", "");
+                        or_groups = or_groups.replace("[", "");
+                        let mut or_output: Vec<String> = Vec::new();
+                        for section in or_groups.split(",") {
+                            or_output.push(section.to_string());
+                        }
+                        pattern.1.push(or_output);
+                    }
                 }
-                output.push(or_vec);
+                output.template.push(TemplateElement {
+                    text: None,
+                    template: Some(pattern)
+                });
+            } else {
+                if !subset.eq(TEMPLATE_WRAPPER) {
+                    output.template.push(TemplateElement {
+                        text: Some(subset.to_string()),
+                        template: None
+                    });
+                }
             }
         }
-        return (word_type, output);
+        
+        output.tags = HashSet::from_iter(get_word_tags(line));
+        return Some(output);
     }
 
     // example template string
@@ -88,13 +117,29 @@ pub mod template {
 
     #[test]
     fn test_parse_template() {
-        assert!(parse_template(
-            "TEMPLATE([[Metal, Wood]] [[Mammal]] Tavern), TAG(Institution), TAG(Restaurant)"
-        )
-        .unwrap()
-        .template
-        .len()
-        .eq(&4));
-        // len being Word, space, Word, Tavern
+        let test_string = "TEMPLATE(ADJECTIVE[[Metal, Wood]] NOUN[[Mammal]] Tavern), TAG(Institution), TAG(Restaurant)";
+        
+        let template = parse_template(test_string).unwrap();
+
+        assert!(template.template.len().eq(&3));
+        assert!(template.tags.len().eq(&2));
+    }
+
+    #[test]
+    fn test_template_render() {
+        let dict = build_dictionary(vec![
+            "TEMPLATE(NOUN[[Metal]] Bull Pub), TAG(Restaurant)".to_string(),
+            "NOUN(Steel), TAG(Metal), TAG(Ferrous), TAG(Alloy)".to_string(),
+            "NOUN(Oak), TAG(Tree)".to_string(),
+            "NOUN(Pear), TAG(Tree), TAG(Fruit)".to_string(),
+            "TAG(Metal), HAS_PARENT(Material)".to_string(),
+            "TAG(Tree), HAS_PARENT(Wood), HAS_PARENT(Plant)".to_string(),
+            "TAG(Wood), HAS_PARENT(Material)".to_string(),
+            "TAG(Fruit), HAS_PARENT(Food)".to_string(),
+            "TAG(Restaurant), HAS_PARENT(Institution)".to_string(),
+        ]);
+        let template_keys = Vec::from_iter(dict.templates.keys());
+        let template = template_keys.first().unwrap();
+        assert!(dict.render_template(template).unwrap().eq("Steel Bull Pub"));
     }
 }

@@ -1,0 +1,4 @@
+// Colours
+ADJECTIVE(Red), TAG(Colour)
+ADJECTIVE(Green), TAG(Colour)
+ADJECTIVE(Blue), TAG(Colour)
