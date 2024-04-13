@@ -1,9 +1,13 @@
 use std::{
     fs::{self, File},
     io::{self, BufRead},
+    time::Instant,
 };
 
-use dictionary::dictionary::build_dictionary;
+use dictionary::{
+    dictionary::{build_dictionary, Dictionary},
+    word::word::WordType,
+};
 
 pub mod dictionary;
 
@@ -27,8 +31,18 @@ fn read_data_files() -> Vec<String> {
     }
     return output;
 }
+
+fn build_name(dict: &Dictionary) -> String {
+    let first = dict
+        .get_random_word((WordType::Noun, vec![vec!["FirstName".to_string()]]))
+        .unwrap();
+    let last = dict
+        .get_random_word((WordType::Noun, vec![vec!["LastName".to_string()]]))
+        .unwrap();
+    return format!("{} {}", first.base, last.base);
+}
 fn main() {
     let data = read_data_files();
-    let dict = build_dictionary(data);
-    println!("{:#?}", dict);
+
+    build_dictionary(data);
 }

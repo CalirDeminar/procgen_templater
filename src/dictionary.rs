@@ -8,7 +8,10 @@ pub mod dictionary {
     use rand::seq::SliceRandom;
     use rand::Rng;
     use regex::Regex;
-    use std::{collections::{HashMap, HashSet}, time::Instant};
+    use std::{
+        collections::{HashMap, HashSet},
+        time::Instant,
+    };
     use uuid::Uuid;
 
     pub static NOUN_WRAPPER: &str = "NOUN";
@@ -35,6 +38,14 @@ pub mod dictionary {
     pub type SearchPattern = (WordType, Vec<Vec<String>>);
 
     impl Dictionary {
+        pub fn inspect(self: &Self) {
+            println!("Dictionary: ");
+            println!("Words: {}", self.words.len());
+            println!("Tags: ");
+            for (k, v) in &self.index.tag_words {
+                println!("{:?}: {}", k, v.len());
+            }
+        }
         pub fn get_random_word(self: &Self, pattern: SearchPattern) -> Option<&Word> {
             // tag arguments [[OR] AND [OR]]
             let (word_type, tags) = pattern;
@@ -88,8 +99,6 @@ pub mod dictionary {
             // TODO
             return None;
         }
-
-        
     }
 
     pub struct ParseResult {
@@ -109,11 +118,14 @@ pub mod dictionary {
                 tag_templates: HashMap::new(),
             },
         };
+        let mut word_times: (f64, f64, f64) = (0.0, 0.0, 0.0);
         for line in &lines {
-            let parse = parse_line(line);
+            let parse = parse_line(line, &mut word_times);
+
             for word in parse.words {
                 output.words.insert(word.id.clone(), word);
             }
+
             if parse.pattern.is_some() {
                 let pattern = parse.pattern.unwrap();
                 output.templates.insert(pattern.id.clone(), pattern);
@@ -137,7 +149,13 @@ pub mod dictionary {
         }
         propegate_tag_children(&mut output);
         build_tag_index(&mut output);
-        println!("Built in {}ms", Instant::now().duration_since(start).as_millis());
+        println!(
+            "Built in {}ms\nWord Parse: {:.0}ms\nTag Parse: {:.0}ms\nPattern Parse: {:.0}ms",
+            Instant::now().duration_since(start).as_millis(),
+            word_times.0 * 1000.0,
+            word_times.1 * 1000.0,
+            word_times.2 * 1000.0
+        );
         return output;
     }
 
@@ -202,15 +220,29 @@ pub mod dictionary {
         }
     }
 
-    fn parse_line(line: &str) -> ParseResult {
+    fn parse_line(line: &str, times: &mut (f64, f64, f64)) -> ParseResult {
+        let word_start = Instant::now();
+        let words = parse_word(line);
+        times.0 += word_start.elapsed().as_secs_f64();
+
+        let tag_start = Instant::now();
+        let tag_children = parse_tag_children(line);
+
+        times.1 += tag_start.elapsed().as_secs_f64();
+        let pattern_start = Instant::now();
+        let pattern = parse_template(line);
+        times.2 += pattern_start.elapsed().as_secs_f64();
         return ParseResult {
-            words: parse_word(line),
-            tag_children: parse_tag_children(line),
-            pattern: parse_template(line),
+            words,
+            tag_children,
+            pattern,
         };
     }
 
     fn parse_tag_children(line: &str) -> HashMap<String, HashSet<String>> {
+        if !line.contains(TAG_PARENT_WRAPPER) {
+            return HashMap::new();
+        }
         let mut output: HashMap<String, HashSet<String>> = HashMap::new();
         let child_tag_regx =
             Regex::new(&format!(r",?\s?{}\(([a-zA-Z0-9]+)\)", TAG_WRAPPER)).unwrap();
@@ -304,6 +336,4 @@ pub mod dictionary {
             .base
             .eq(&"Pear"));
     }
-
-   
 }

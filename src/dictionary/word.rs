@@ -55,6 +55,9 @@ pub mod word {
     }
 
     pub fn parse_word(line: &str) -> Vec<Word> {
+        if !(line.contains(NOUN_WRAPPER) || line.contains(ADJECTIVE_WRAPPER)) {
+            return vec![];
+        }
         let mut output: Vec<Word> = vec![];
         let noun_value = get_wrapper_content(NOUN_WRAPPER, line);
         let adjective_value = get_wrapper_content(ADJECTIVE_WRAPPER, line);

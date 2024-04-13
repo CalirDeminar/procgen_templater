@@ -55,12 +55,20 @@ pub mod template {
     }
 
     pub fn parse_template(line: &str) -> Option<Template> {
-
-        let and_groups_pattern = Regex::new(r"(ADJECTIVE|NOUN)\[(\[(?:[a-zA-Z, ]+)+\])+\]").unwrap();
-        let subset_pattern = Regex::new(&format!(r"{}|(?:[a-zA-Z]+)", and_groups_pattern.as_str())).unwrap();
-        let search_pattern = Regex::new(&format!(r"TEMPLATE\((?:(?:(?:{}\s?)+)+|(?:[A-Za-z ]+))+\)", subset_pattern.as_str())).unwrap();
+        if !line.contains(TEMPLATE_WRAPPER) {
+            return None;
+        }
+        let and_groups_pattern =
+            Regex::new(r"(ADJECTIVE|NOUN)\[(\[(?:[a-zA-Z, ]+)+\])+\]").unwrap();
+        let subset_pattern =
+            Regex::new(&format!(r"{}|(?:[a-zA-Z]+)", and_groups_pattern.as_str())).unwrap();
+        let search_pattern = Regex::new(&format!(
+            r"TEMPLATE\((?:(?:(?:{}\s?)+)+|(?:[A-Za-z ]+))+\)",
+            subset_pattern.as_str()
+        ))
+        .unwrap();
         let search_result = search_pattern.find(line);
-        
+
         let mut output = Template {
             id: Uuid::new_v4(),
             template: Vec::new(),
@@ -69,21 +77,20 @@ pub mod template {
         if search_result.is_none() {
             return None;
         }
-        for subset in subset_pattern.find_iter(search_result.unwrap().as_str()).map(|m| m.as_str()) {
-        
+        for subset in subset_pattern
+            .find_iter(search_result.unwrap().as_str())
+            .map(|m| m.as_str())
+        {
             let mut pattern: SearchPattern = (WordType::Noun, Vec::new());
             let and_groups = and_groups_pattern.captures(subset);
             if and_groups.is_some() {
-                
                 for and in and_groups.unwrap().iter().skip(1) {
                     let and_str = and.unwrap().as_str();
                     if and_str.eq("NOUN") {
                         pattern.0 = WordType::Noun;
                     } else if and_str.eq("ADJECTIVE") {
                         pattern.0 = WordType::Adjective;
-                    } else if and_str.eq("TEMPLATE") 
-                    {
-
+                    } else if and_str.eq("TEMPLATE") {
                     } else {
                         let mut or_groups = and_str.replace("]", "");
                         or_groups = or_groups.replace("[", "");
@@ -96,18 +103,18 @@ pub mod template {
                 }
                 output.template.push(TemplateElement {
                     text: None,
-                    template: Some(pattern)
+                    template: Some(pattern),
                 });
             } else {
                 if !subset.eq(TEMPLATE_WRAPPER) {
                     output.template.push(TemplateElement {
                         text: Some(subset.to_string()),
-                        template: None
+                        template: None,
                     });
                 }
             }
         }
-        
+
         output.tags = HashSet::from_iter(get_word_tags(line));
         return Some(output);
     }
@@ -118,7 +125,7 @@ pub mod template {
     #[test]
     fn test_parse_template() {
         let test_string = "TEMPLATE(ADJECTIVE[[Metal, Wood]] NOUN[[Mammal]] Tavern), TAG(Institution), TAG(Restaurant)";
-        
+
         let template = parse_template(test_string).unwrap();
 
         assert!(template.template.len().eq(&3));
