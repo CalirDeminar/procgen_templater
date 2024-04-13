@@ -8,7 +8,7 @@ pub mod dictionary {
     use rand::seq::SliceRandom;
     use rand::Rng;
     use regex::Regex;
-    use std::collections::{HashMap, HashSet};
+    use std::{collections::{HashMap, HashSet}, time::Instant};
     use uuid::Uuid;
 
     pub static NOUN_WRAPPER: &str = "NOUN";
@@ -99,6 +99,7 @@ pub mod dictionary {
     }
 
     pub fn build_dictionary(lines: Vec<String>) -> Dictionary {
+        let start = Instant::now();
         let mut output = Dictionary {
             words: HashMap::new(),
             templates: HashMap::new(),
@@ -136,6 +137,7 @@ pub mod dictionary {
         }
         propegate_tag_children(&mut output);
         build_tag_index(&mut output);
+        println!("Built in {}ms", Instant::now().duration_since(start).as_millis());
         return output;
     }
 
