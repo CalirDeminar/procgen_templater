@@ -1,15 +1,12 @@
 use std::{
     fs::{self, File},
     io::{self, BufRead},
-    time::Instant,
 };
 
-use dictionary::{
-    dictionary::{build_dictionary, Dictionary},
-    word::word::WordType,
-};
+use dictionary::dictionary::{build_dictionary, build_dictionary_from_folder, Dictionary};
 
 pub mod dictionary;
+pub mod people;
 
 fn read_data_files() -> Vec<String> {
     let path_root = "./src/dictionary/data_files";
@@ -32,17 +29,10 @@ fn read_data_files() -> Vec<String> {
     return output;
 }
 
-fn build_name(dict: &Dictionary) -> String {
-    let first = dict
-        .get_random_word((WordType::Noun, vec![vec!["FirstName".to_string()]]))
-        .unwrap();
-    let last = dict
-        .get_random_word((WordType::Noun, vec![vec!["LastName".to_string()]]))
-        .unwrap();
-    return format!("{} {}", first.base, last.base);
+pub fn build_default_dictionary() -> Dictionary {
+    return build_dictionary(read_data_files());
 }
-fn main() {
-    let data = read_data_files();
 
-    build_dictionary(data);
+fn main() {
+    build_dictionary_from_folder("./src/dictionary/data_files");
 }

@@ -5,16 +5,11 @@ pub mod template {
     use uuid::Uuid;
 
     use crate::dictionary::{
-        dictionary::{build_dictionary, Dictionary, SearchPattern},
-        word::word::{get_word_tags, get_wrapper_content, WordType},
+        dictionary::{Dictionary, SearchPattern},
+        word::word::{get_word_tags, WordType},
     };
 
     static TEMPLATE_WRAPPER: &str = "TEMPLATE";
-
-    static TEMPLATE_GLOBAL_REGEX: &str = r"(?:\[(\[(?:[a-zA-Z]+,? ?)+\],? ?)+\])|[a-zA-Z ]+";
-    static TEMPLATE_FORMAT_TOP_REGEX: &str = r"\[(\[(?:[a-zA-Z]+,? ?)+\],? ?)+\]";
-    static TEMPLATE_FORMAT_AND_GROUP_REGEX: &str = r"\[(?:[a-zA-Z]+,? ?)+\]";
-    static TEMPLATE_FORMAT_OR_GROUP_REGEX: &str = r"([a-zA-Z ]+)+";
 
     #[derive(PartialEq, Debug, Clone)]
     pub struct TemplateElement {
@@ -134,6 +129,7 @@ pub mod template {
 
     #[test]
     fn test_template_render() {
+        use crate::dictionary::dictionary::build_dictionary;
         let dict = build_dictionary(vec![
             "TEMPLATE(NOUN[[Metal]] Bull Pub), TAG(Restaurant)".to_string(),
             "NOUN(Steel), TAG(Metal), TAG(Ferrous), TAG(Alloy)".to_string(),

@@ -3,7 +3,7 @@ TAG(Vegetable), HAS_PARENT(Food), HAS_PARENT(Plant), HAS_PARENT(Crop)
 TAG(Leaf), HAS_PARENT(Food), HAS_PARENT(Plant), HAS_PARENT(Crop)
 TAG(Fruit), HAS_PARENT(Food), HAS_PARENT(Plant), HAS_PARENT(Crop)
 TAG(Tree), HAS_PARENT(Plant), HAS_PARENT(Wood)
-TAG(Wood), HAS_PARENT(Material)
+TAG(Wood), HAS_PARENT(Material), HAS_PARENT(Structural), HAS_PARENT(Fuel)
 TAG(Flower), HAS_PARENT(Plant)
 TAG(Grain), HAS_PARENT(Food), HAS_PARENT(Plant), HAS_PARENT(Crop)
 // trees

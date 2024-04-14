@@ -6,10 +6,11 @@ pub mod dictionary {
         word::word::{parse_word, Word, WordType},
     };
     use rand::seq::SliceRandom;
-    use rand::Rng;
     use regex::Regex;
     use std::{
         collections::{HashMap, HashSet},
+        fs::{self, File},
+        io::{self, BufRead},
         time::Instant,
     };
     use uuid::Uuid;
@@ -91,12 +92,37 @@ pub mod dictionary {
             return None;
         }
 
-        fn get_random_template(
-            self: &Self,
-            word_type: WordType,
-            tags: SearchPattern,
-        ) -> Option<&Template> {
-            // TODO
+        pub fn get_random_template(self: &Self, tags: Vec<Vec<String>>) -> Option<&Template> {
+            let mut pattern_pool: HashSet<Uuid> = HashSet::new();
+            for or_set in &tags {
+                let mut s: HashSet<Uuid> = HashSet::new();
+                for or in or_set {
+                    if self.index.tag_templates.contains_key(or) {
+                        let tag_ids = self.index.tag_templates.get(or).unwrap();
+                        for id in tag_ids {
+                            s.insert(id.clone());
+                        }
+                    }
+                }
+                if pattern_pool.len().eq(&0) {
+                    pattern_pool = s;
+                } else {
+                    let pool_clone = pattern_pool.clone();
+                    for pattern in pool_clone {
+                        if !s.contains(&pattern) {
+                            pattern_pool.remove(&pattern);
+                        }
+                    }
+                }
+            }
+            let mut pool: Vec<&Template> = pattern_pool
+                .iter()
+                .map(|p| self.templates.get(p).unwrap())
+                .collect();
+            pool.shuffle(&mut rand::thread_rng());
+            if pool.first().is_some() {
+                return Some(*pool.first().unwrap());
+            }
             return None;
         }
     }
@@ -157,6 +183,26 @@ pub mod dictionary {
             word_times.2 * 1000.0
         );
         return output;
+    }
+
+    pub fn build_dictionary_from_folder(folder_path: &str) -> Dictionary {
+        let paths = fs::read_dir(folder_path).unwrap();
+        let mut output: Vec<String> = Vec::new();
+        for path in paths {
+            let filename = path.unwrap().file_name();
+            let data = File::open(&format!("{}/{}", folder_path, filename.to_str().unwrap()))
+                .expect(&format!("Cannot open: {}", filename.into_string().unwrap()));
+            let lines = io::BufReader::new(data).lines();
+            for l in lines {
+                if l.is_ok() {
+                    let line = l.unwrap();
+                    if line.len() > 0 {
+                        output.push(line);
+                    }
+                }
+            }
+        }
+        return build_dictionary(output);
     }
 
     fn propegate_tag_children(dict: &mut Dictionary) {
@@ -335,5 +381,25 @@ pub mod dictionary {
             .unwrap()
             .base
             .eq(&"Pear"));
+    }
+
+    #[test]
+    fn test_random_template() {
+        let dict = build_dictionary(vec![
+            "TEMPLATE(NOUN[[Metal]] Bull Pub), TAG(Restaurant)".to_string(),
+            "NOUN(Steel), TAG(Metal), TAG(Ferrous), TAG(Alloy)".to_string(),
+            "NOUN(Oak), TAG(Tree)".to_string(),
+            "NOUN(Pear), TAG(Tree), TAG(Fruit)".to_string(),
+            "TAG(Metal), HAS_PARENT(Material)".to_string(),
+            "TAG(Tree), HAS_PARENT(Wood), HAS_PARENT(Plant)".to_string(),
+            "TAG(Wood), HAS_PARENT(Material)".to_string(),
+            "TAG(Fruit), HAS_PARENT(Food)".to_string(),
+            "TAG(Restaurant), HAS_PARENT(Institution)".to_string(),
+        ]);
+        let t = dict
+            .get_random_template(vec![vec!["Restaurant".to_string()]])
+            .unwrap();
+        assert!(t.template.len().eq(&3));
+        assert!(dict.render_template(&t.id).unwrap().eq("Steel Bull Pub"));
     }
 }
