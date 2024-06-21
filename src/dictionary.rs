@@ -134,7 +134,7 @@ pub mod dictionary {
                 .map(|w| self.words.get(w).unwrap())
                 .collect();
             pool.shuffle(&mut rand::thread_rng());
-            pool.retain(|w| !exclude.contains(&w.base));
+            pool.retain(|w| !w.tags.iter().any(|t| exclude.contains(t)));
 
             if pool.first().is_some() {
                 return Some(*pool.first().unwrap());
