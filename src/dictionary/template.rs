@@ -39,7 +39,7 @@ pub mod template {
                         }
                     })
                     .collect();
-                return Some(components.join(" "));
+                return Some(components.join(" ").replace(" '", "'"));
             }
             return None;
         }
