@@ -27,10 +27,13 @@ pub mod template {
                     .iter()
                     .map(|c| {
                         if c.template.is_some() {
-                            self.get_random_word((WordType::Noun, c.template.clone().unwrap().1))
-                                .unwrap()
-                                .base
-                                .clone()
+                            self.get_random_word((
+                                c.template.clone().unwrap().0,
+                                c.template.clone().unwrap().1,
+                            ))
+                            .unwrap()
+                            .base
+                            .clone()
                         } else {
                             c.text.clone().unwrap()
                         }
@@ -131,7 +134,8 @@ pub mod template {
     fn test_template_render() {
         use crate::dictionary::dictionary::build_dictionary;
         let dict = build_dictionary(vec![
-            "TEMPLATE(NOUN[[Metal]] Bull Pub), TAG(Restaurant)".to_string(),
+            "TEMPLATE(ADJECTIVE[[Colour]] NOUN[[Metal]] Bull Pub), TAG(Restaurant)".to_string(),
+            "ADJECTIVE(Blue), TAG(Colour)".to_string(),
             "NOUN(Steel), TAG(Metal), TAG(Ferrous), TAG(Alloy)".to_string(),
             "NOUN(Oak), TAG(Tree)".to_string(),
             "NOUN(Pear), TAG(Tree), TAG(Fruit)".to_string(),
@@ -143,6 +147,9 @@ pub mod template {
         ]);
         let template_keys = Vec::from_iter(dict.templates.keys());
         let template = template_keys.first().unwrap();
-        assert!(dict.render_template(template).unwrap().eq("Steel Bull Pub"));
+        assert!(dict
+            .render_template(template)
+            .unwrap()
+            .eq("Blue Steel Bull Pub"));
     }
 }
