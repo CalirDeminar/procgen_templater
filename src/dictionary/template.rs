@@ -57,11 +57,11 @@ pub mod template {
             return None;
         }
         let and_groups_pattern =
-            Regex::new(r"(ADJECTIVE|NOUN)\[((?:\[(?:[a-zA-Z, ]+)+\])+)\]").unwrap();
+            Regex::new(r"(ADJECTIVE|NOUN)\[((?:\[(?:[a-zA-Z', ]+)+\])+)\]").unwrap();
         let subset_pattern =
-            Regex::new(&format!(r"{}|(?:[a-zA-Z]+)", and_groups_pattern.as_str())).unwrap();
+            Regex::new(&format!(r"{}|(?:[a-zA-Z']+)", and_groups_pattern.as_str())).unwrap();
         let search_pattern = Regex::new(&format!(
-            r"TEMPLATE\((?:(?:(?:{}\s?)+)+|(?:[A-Za-z ]+))+\)",
+            r"TEMPLATE\((?:(?:(?:{}\s?)+)+|(?:[A-Za-z' ]+))+\)",
             subset_pattern.as_str()
         ))
         .unwrap();
@@ -142,7 +142,7 @@ pub mod template {
     fn test_template_render() {
         use crate::dictionary::dictionary::build_dictionary;
         let dict = build_dictionary(vec![
-            "TEMPLATE(ADJECTIVE[[Colour, Metal]] NOUN[[Metal, Colour]] Bull Pub), TAG(Restaurant)"
+            "TEMPLATE(ADJECTIVE[[Colour, Metal]] NOUN[[Metal, Colour]] Bull's Pub), TAG(Restaurant)"
                 .to_string(),
             "ADJECTIVE(Blue), TAG(Colour)".to_string(),
             "NOUN(Steel), TAG(Metal), TAG(Ferrous), TAG(Alloy)".to_string(),
@@ -159,7 +159,7 @@ pub mod template {
         assert!(dict
             .render_template(template)
             .unwrap()
-            .eq("Blue Steel Bull Pub"));
+            .eq("Blue Steel Bull's Pub"));
     }
 
     #[test]
