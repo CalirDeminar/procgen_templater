@@ -1,5 +1,5 @@
 pub mod template {
-    use std::collections::HashSet;
+    use std::{collections::HashSet, str::FromStr};
 
     use regex::Regex;
     use uuid::Uuid;
@@ -57,7 +57,7 @@ pub mod template {
             return None;
         }
         let and_groups_pattern =
-            Regex::new(r"(ADJECTIVE|NOUN)\[(\[(?:[a-zA-Z, ]+)+\])+\]").unwrap();
+            Regex::new(r"(ADJECTIVE|NOUN)\[((?:\[(?:[a-zA-Z, ]+)+\])+)\]").unwrap();
         let subset_pattern =
             Regex::new(&format!(r"{}|(?:[a-zA-Z]+)", and_groups_pattern.as_str())).unwrap();
         let search_pattern = Regex::new(&format!(
@@ -82,23 +82,31 @@ pub mod template {
             let mut pattern: SearchPattern = (WordType::Noun, Vec::new());
             let and_groups = and_groups_pattern.captures(subset);
             if and_groups.is_some() {
-                for and in and_groups.unwrap().iter().skip(1) {
-                    let and_str = and.unwrap().as_str();
-                    if and_str.eq("NOUN") {
-                        pattern.0 = WordType::Noun;
-                    } else if and_str.eq("ADJECTIVE") {
-                        pattern.0 = WordType::Adjective;
-                    } else if and_str.eq("TEMPLATE") {
-                    } else {
-                        let mut or_groups = and_str.replace("]", "");
-                        or_groups = or_groups.replace("[", "");
-                        let mut or_output: Vec<String> = Vec::new();
-                        for section in or_groups.split(",") {
-                            or_output.push(section.to_string());
-                        }
-                        pattern.1.push(or_output);
-                    }
+                let group: Vec<Option<regex::Match>> = and_groups.unwrap().iter().collect();
+                let mut options = group.first().unwrap().unwrap().as_str().to_string();
+
+                if Regex::from_str(r"^ADJECTIVE.*").unwrap().is_match(&options) {
+                    pattern.0 = WordType::Adjective;
                 }
+                options = options.replace("ADJECTIVE", "");
+                options = options.replace("NOUN", "");
+                let or_groups: Vec<String> = options
+                    .split("]")
+                    .into_iter()
+                    .filter(|i| i.len() > 1)
+                    .map(|i| i.replace("[", ""))
+                    .collect();
+
+                for or_group in or_groups {
+                    let and_elements: Vec<String> = or_group
+                        .split(",")
+                        .into_iter()
+                        .map(|i| i.trim())
+                        .map(|i| i.to_string())
+                        .collect();
+                    pattern.1.push(and_elements);
+                }
+
                 output.template.push(TemplateElement {
                     text: None,
                     template: Some(pattern),
@@ -134,7 +142,8 @@ pub mod template {
     fn test_template_render() {
         use crate::dictionary::dictionary::build_dictionary;
         let dict = build_dictionary(vec![
-            "TEMPLATE(ADJECTIVE[[Colour]] NOUN[[Metal]] Bull Pub), TAG(Restaurant)".to_string(),
+            "TEMPLATE(ADJECTIVE[[Colour, Metal]] NOUN[[Metal, Colour]] Bull Pub), TAG(Restaurant)"
+                .to_string(),
             "ADJECTIVE(Blue), TAG(Colour)".to_string(),
             "NOUN(Steel), TAG(Metal), TAG(Ferrous), TAG(Alloy)".to_string(),
             "NOUN(Oak), TAG(Tree)".to_string(),
@@ -151,5 +160,22 @@ pub mod template {
             .render_template(template)
             .unwrap()
             .eq("Blue Steel Bull Pub"));
+    }
+
+    #[test]
+    fn test_template_correctness() {
+        use crate::dictionary::dictionary::build_dictionary;
+        let dict = build_dictionary(vec![
+            "TEMPLATE(ADJECTIVE[[Large, Medium][Mammal, Bird]])".to_string()
+        ]);
+        let templates: Vec<&Template> = dict.templates.values().collect();
+        let template = templates.first().unwrap();
+        let element = template.template.first().unwrap().clone();
+        let element_template = element.template.unwrap();
+        assert!(element_template.0.eq(&WordType::Adjective));
+        assert!(element_template.1.eq(&vec![
+            vec!["Large".to_string(), "Medium".to_string()],
+            vec!["Mammal".to_string(), "Bird".to_string()]
+        ]));
     }
 }
