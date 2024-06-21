@@ -92,6 +92,56 @@ pub mod dictionary {
             return None;
         }
 
+        pub fn get_random_word_without(
+            self: &Self,
+            pattern: SearchPattern,
+            exclude: Vec<String>,
+        ) -> Option<&Word> {
+            // tag arguments [[OR] AND [OR]]
+            let (word_type, tags) = pattern;
+            let mut word_pool: HashSet<Uuid> = HashSet::new();
+            for or_set in &tags {
+                let mut s: HashSet<Uuid> = HashSet::new();
+                for or in or_set {
+                    if self
+                        .index
+                        .tag_words
+                        .contains_key(&(word_type.clone(), or.to_string()))
+                    {
+                        let tag_ids = self
+                            .index
+                            .tag_words
+                            .get(&(word_type.clone(), or.to_string()))
+                            .unwrap();
+                        for id in tag_ids {
+                            s.insert(*id);
+                        }
+                    }
+                }
+                if word_pool.len().eq(&0) {
+                    word_pool = s;
+                } else {
+                    let pool_clone = word_pool.clone();
+                    for word in pool_clone {
+                        if !s.contains(&word) {
+                            word_pool.remove(&word);
+                        }
+                    }
+                }
+            }
+            let mut pool: Vec<&Word> = word_pool
+                .iter()
+                .map(|w| self.words.get(w).unwrap())
+                .collect();
+            pool.shuffle(&mut rand::thread_rng());
+            pool.retain(|w| !exclude.contains(&w.base));
+
+            if pool.first().is_some() {
+                return Some(*pool.first().unwrap());
+            }
+            return None;
+        }
+
         pub fn get_random_template(self: &Self, tags: Vec<Vec<String>>) -> Option<&Template> {
             let mut pattern_pool: HashSet<Uuid> = HashSet::new();
             for or_set in &tags {
