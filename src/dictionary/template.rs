@@ -2,6 +2,7 @@ pub mod template {
     use std::{collections::HashSet, str::FromStr};
 
     use regex::Regex;
+    use titlecase::titlecase;
     use uuid::Uuid;
 
     use crate::dictionary::{
@@ -43,6 +44,15 @@ pub mod template {
             }
             return None;
         }
+
+        pub fn render_template_as_title(self: &Self, template_id: &Uuid) -> Option<String> {
+            let o = self.render_template(template_id);
+            if o.is_none() {
+                return None;
+            } else {
+                return Some(titlecase(o.unwrap().to_ascii_lowercase().as_str()));
+            }
+        }
     }
 
     #[derive(PartialEq, Debug, Clone)]
@@ -58,15 +68,18 @@ pub mod template {
         }
         let and_groups_pattern =
             Regex::new(r"(ADJECTIVE|NOUN)\[((?:\[(?:[a-zA-Z', ]+)+\])+)\]").unwrap();
-        let subset_pattern =
-            Regex::new(&format!(r"{}|(?:[a-zA-Z\s']?[a-z'\s]+)", and_groups_pattern.as_str())).unwrap();
+        let subset_pattern = Regex::new(&format!(
+            r"{}|(?:[a-zA-Z\s']?[a-z'\s]+)",
+            and_groups_pattern.as_str()
+        ))
+        .unwrap();
         let search_pattern = Regex::new(&format!(
             r"TEMPLATE\((?:(?:(?:{}\s?)+)+|(?:[A-Za-z' ]+))+\)",
             subset_pattern.as_str()
         ))
         .unwrap();
         let search_result = search_pattern.find(line);
-        
+
         let mut output = Template {
             id: Uuid::new_v4(),
             template: Vec::new(),
@@ -81,12 +94,15 @@ pub mod template {
         {
             let mut pattern: SearchPattern = (WordType::Noun, Vec::new());
             let and_groups = and_groups_pattern.captures(subset.trim());
-            
+
             if and_groups.is_some() {
                 let group: Vec<Option<regex::Match>> = and_groups.unwrap().iter().collect();
                 let mut options = group.first().unwrap().unwrap().as_str().to_string();
 
-                if Regex::from_str(r"^ADJECTIVE.*").unwrap().is_match(&options.trim()) {
+                if Regex::from_str(r"^ADJECTIVE.*")
+                    .unwrap()
+                    .is_match(&options.trim())
+                {
                     pattern.0 = WordType::Adjective;
                 }
                 options = options.replace("ADJECTIVE", "");
@@ -166,8 +182,7 @@ pub mod template {
     fn test_template_space_handling() {
         use crate::dictionary::dictionary::build_dictionary;
         let dict = build_dictionary(vec![
-            "TEMPLATE(ADJECTIVE[[Colour, Metal]]Ford)"
-                .to_string(),
+            "TEMPLATE(ADJECTIVE[[Colour, Metal]]Ford)".to_string(),
             "ADJECTIVE(Blue), TAG(Colour)".to_string(),
             "NOUN(Steel), TAG(Metal), TAG(Ferrous), TAG(Alloy)".to_string(),
             "NOUN(Oak), TAG(Tree)".to_string(),
@@ -177,9 +192,9 @@ pub mod template {
         let template = template_keys.first().unwrap();
 
         assert!(dict
-            .render_template(template)
+            .render_template_as_title(template)
             .unwrap()
-            .eq("BlueFord"));
+            .eq("Blueford"));
     }
 
     #[test]
