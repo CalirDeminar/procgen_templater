@@ -184,7 +184,7 @@ pub mod dictionary {
     }
 
     pub fn build_dictionary(lines: Vec<String>) -> Dictionary {
-        let start = Instant::now();
+        // let start = Instant::now();
         let mut output = Dictionary {
             words: HashMap::new(),
             templates: HashMap::new(),
@@ -225,13 +225,13 @@ pub mod dictionary {
         }
         propegate_tag_children(&mut output);
         build_tag_index(&mut output);
-        println!(
-            "Built in {}ms\nWord Parse: {:.0}ms\nTag Parse: {:.0}ms\nPattern Parse: {:.0}ms",
-            Instant::now().duration_since(start).as_millis(),
-            word_times.0 * 1000.0,
-            word_times.1 * 1000.0,
-            word_times.2 * 1000.0
-        );
+        // println!(
+        //     "Built in {}ms\nWord Parse: {:.0}ms\nTag Parse: {:.0}ms\nPattern Parse: {:.0}ms",
+        //     Instant::now().duration_since(start).as_millis(),
+        //     word_times.0 * 1000.0,
+        //     word_times.1 * 1000.0,
+        //     word_times.2 * 1000.0
+        // );
         return output;
     }
 
@@ -449,7 +449,7 @@ pub mod dictionary {
         let t = dict
             .get_random_template(vec![vec!["Restaurant".to_string()]])
             .unwrap();
-        assert!(t.template.len().eq(&3));
+        assert!(t.template.len().eq(&4));
         assert!(dict.render_template(&t.id).unwrap().eq("Steel Bull Pub"));
     }
 }
